@@ -29,20 +29,25 @@ def database_url() -> str:
 
 
 def init_db() -> None:
-    """Create the engine from the current DATABASE_URL and ensure tables exist."""
+    """Create the engine from the current DATABASE_URL and ensure tables exist.
+    Supports both SQLite (local dev) and PostgreSQL (Render)."""
     global engine, SessionLocal
     url = database_url()
-    if url.startswith("sqlite:///"):
+    # SQLite specific handling – ensure directory exists and enable threading flag
+    if url.startswith("sqlite"):
         path_part = url.replace("sqlite:///", "", 1)
         if path_part and path_part != ":memory:" and not path_part.startswith("file:"):
             Path(path_part).parent.mkdir(parents=True, exist_ok=True)
-    engine = create_engine(url, connect_args={"check_same_thread": False})
-
-    @event.listens_for(engine, "connect")
-    def _enable_foreign_keys(dbapi_connection, _connection_record) -> None:  # type: ignore[no-untyped-def]
-        cursor = dbapi_connection.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
+        engine = create_engine(url, connect_args={"check_same_thread": False})
+        # Enable foreign‑key enforcement only for SQLite.
+        @event.listens_for(engine, "connect")
+        def _enable_foreign_keys(dbapi_connection, _connection_record) -> None:  # type: ignore[no-untyped-def]
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
+    else:
+        # PostgreSQL (or any other) – no special connect args needed
+        engine = create_engine(url)
 
     SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)
     from app import models  # noqa: F401
