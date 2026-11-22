@@ -74,7 +74,7 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 cd frontend
 npm run dev
 ```
-* Web Application: http://localhost:5173
+* Web Application: http://localhost:5174
 
 ### 3. Run Automated Tests
 ```bash
